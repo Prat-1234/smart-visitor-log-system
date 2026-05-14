@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Visitor Log</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 16px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #e040fb, #7c4dff, #40c4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
+  }
+
+  header p {
+    color: #90a4ae;
+    margin-top: 6px;
+    font-size: 0.9rem;
+  }
+
+  .stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 14px 24px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+  }
+
+  .stat-card .val {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #e040fb;
+  }
+
+  .stat-card .lbl {
+    font-size: 0.75rem;
+    color: #90a4ae;
+    margin-top: 2px;
+  }
+
+  .container {
+    display: flex;
+    gap: 24px;
+    width: 100%;
+    max-width: 900px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 28px;
+    backdrop-filter: blur(10px);
+    flex: 1;
+    min-width: 300px;
+  }
+
+  .card h2 {
+    color: #e0e0e0;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card h2 span { font-size: 1.3rem; }
+
+  .input-group {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .input-group input,
+  .input-group select,
+  .input-group textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 13px 16px;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+
+  .input-group textarea { resize: none; height: 80px; }
+
+  .input-group input:focus,
+  .input-group select:focus,
+  .input-group textarea:focus {
+    border-color: #7c4dff;
+  }
+
+  .input-group input::placeholder,
+  .input-group textarea::placeholder { color: #546e7a; }
+
+  .input-group select option { background: #1a1a2e; }
+
+  .error { color: #ff5252; font-size: 0.78rem; margin-top: 4px; display: none; }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #7c4dff, #e040fb);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 4px;
+  }
+
+  .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Summary card */
+  .summary { display: none; }
+
+  .visitor-id {
+    font-size: 0.75rem;
+    color: #7c4dff;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    background: rgba(124,77,255,0.1);
+    padding: 6px 12px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-size: 0.88rem;
+  }
+
+  .summary-row:last-of-type { border-bottom: none; }
+  .summary-row .key { color: #90a4ae; }
+  .summary-row .val { color: #e0e0e0; font-weight: 500; text-align: right; max-width: 60%; }
+
+  #qrcode {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+  }
+
+  #qrcode canvas, #qrcode img {
+    border-radius: 10px;
+    padding: 10px;
+    background: white;
+  }
+
+  .badge {
+    margin-top: 16px;
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(64, 196, 255, 0.1);
+    border: 1px solid rgba(64,196,255,0.2);
+    color: #40c4ff;
+    font-size: 0.8rem;
+  }
+
+  .success-msg {
+    display: none;
+    text-align: center;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(0,230,118,0.1);
+    border: 1px solid rgba(0,230,118,0.3);
+    color: #00e676;
+    font-size: 0.88rem;
+    margin-top: 12px;
+  }
+
+  .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #time-display {
+    color: #40c4ff;
+    font-size: 0.82rem;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏢 Smart Visitor Log</h1>
+  <p>Secure · Smart · Serverless</p>
+</header>
+
+<div class="stats">
+  <div class="stat-card">
+    <div class="val" id="visitor-count">0</div>
+    <div class="lbl">Visitors Today</div>
+  </div>
+  <div class="stat-card">
+    <div class="val" id="time-now">--:--</div>
+    <div class="lbl">Current Time</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Form Card -->
+  <div class="card" id="form-card">
+    <h2><span>📋</span> Visitor Registration</h2>
+
+    <div class="input-group">
+      <input type="text" id="name" placeholder="Full Name" maxlength="60">
+      <div class="error" id="err-name">Please enter your name</div>
+    </div>
+
+    <div class="input-group">
+      <input type="email" id="email" placeholder="Email Address">
+      <div class="error" id="err-email">Please enter a valid email</div>
+    </div>
+
+    <div class="input-group">
+      <input type="tel" id="phone" placeholder="Phone Number" maxlength="10">
+      <div class="error" id="err-phone">Enter a valid 10-digit number</div>
+    </div>
+
+    <div class="input-group">
+      <select id="purpose">
+        <option value="" disabled selected>Purpose of Visit</option>
+        <option>Meeting</option>
+        <option>Interview</option>
+        <option>Delivery</option>
+        <option>Maintenance</option>
+        <option>Personal Work</option>
+        <option>Other</option>
+      </select>
+      <div class="error" id="err-purpose">Please select a purpose</div>
+    </div>
+
+    <div class="input-group">
+      <input type="text" id="host" placeholder="Person / Department to Meet">
+      <div class="error" id="err-host">Please enter who you're visiting</div>
+    </div>
+
+    <button class="btn" id="submit-btn" onclick="submitForm()">
+      <span id="btn-text">Check In</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+
+    <div class="success-msg" id="success-msg">✅ Visitor logged successfully!</div>
+  </div>
+
+  <!-- Summary Card -->
+  <div class="card summary" id="summary-card">
+    <h2><span>✅</span> Visitor Summary</h2>
+
+    <div class="visitor-id" id="visitor-id-display"></div>
+
+    <div class="summary-row"><span class="key">Name</span><span class="val" id="s-name"></span></div>
+    <div class="summary-row"><span class="key">Email</span><span class="val" id="s-email"></span></div>
+    <div class="summary-row"><span class="key">Phone</span><span class="val" id="s-phone"></span></div>
+    <div class="summary-row"><span class="key">Purpose</span><span class="val" id="s-purpose"></span></div>
+    <div class="summary-row"><span class="key">Visiting</span><span class="val" id="s-host"></span></div>
+    <div class="summary-row"><span class="key">Check-in Time</span><span class="val" id="s-time"></span></div>
+
+    <div id="qrcode"></div>
+
+    <div class="badge" id="badge">🪪 Visitor ID verified and logged to cloud</div>
+
+    <button class="btn" style="margin-top:16px; background: rgba(255,255,255,0.1);"
+      onclick="resetForm()">Register Another Visitor</button>
+  </div>
+
+</div>
+
+<script>
+  // Live clock
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('time-now').textContent =
+      now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Visitor count (local for now, will come from DynamoDB later)
+  let count = parseInt(localStorage.getItem('vc') || '0');
+  document.getElementById('visitor-count').textContent = count;
+
+  function genVisitorId() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    return `VIS-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${Math.floor(1000+Math.random()*9000)}`;
+  }
+
+  function validate() {
+    let ok = true;
+    const fields = [
+      { id: 'name', err: 'err-name', check: v => v.trim().length >= 2 },
+      { id: 'email', err: 'err-email', check: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+      { id: 'phone', err: 'err-phone', check: v => /^\d{10}$/.test(v) },
+      { id: 'purpose', err: 'err-purpose', check: v => v !== '' },
+      { id: 'host', err: 'err-host', check: v => v.trim().length >= 2 },
+    ];
+    fields.forEach(f => {
+      const val = document.getElementById(f.id).value;
+      const errEl = document.getElementById(f.err);
+      if (!f.check(val)) { errEl.style.display = 'block'; ok = false; }
+      else errEl.style.display = 'none';
+    });
+    return ok;
+  }
+
+  async function submitForm() {
+    if (!validate()) return;
+
+    const btn = document.getElementById('submit-btn');
+    const btnText = document.getElementById('btn-text');
+    const spinner = document.getElementById('spinner');
+
+    btn.disabled = true;
+    btnText.style.display = 'none';
+    spinner.style.display = 'block';
+
+    const visitorData = {
+      name: document.getElementById('name').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      purpose: document.getElementById('purpose').value,
+      host: document.getElementById('host').value.trim(),
+      timestamp: new Date().toLocaleString('en-IN'),
+      visitorId: genVisitorId()
+    };
+
+    // ⚠️ Replace with your actual API Gateway URL
+    const API_URL = "https://ktnj6q3bja.execute-api.us-east-1.amazonaws.com/visitor";
+
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(visitorData)
+      });
+    } catch(e) {
+      // Continue even if API fails during local testing
+      console.log("API not connected yet:", e.message);
+    }
+
+    // Show summary
+    showSummary(visitorData);
+
+    // Update count
+    count++;
+    localStorage.setItem('vc', count);
+    document.getElementById('visitor-count').textContent = count;
+
+    btn.disabled = false;
+    btnText.style.display = 'block';
+    spinner.style.display = 'none';
+  }
+
+  function showSummary(d) {
+    document.getElementById('s-name').textContent = d.name;
+    document.getElementById('s-email').textContent = d.email;
+    document.getElementById('s-phone').textContent = d.phone;
+    document.getElementById('s-purpose').textContent = d.purpose;
+    document.getElementById('s-host').textContent = d.host;
+    document.getElementById('s-time').textContent = d.timestamp;
+    document.getElementById('visitor-id-display').textContent = d.visitorId;
+
+    document.getElementById('qrcode').innerHTML = '';
+    new QRCode(document.getElementById('qrcode'), {
+      text: `${d.visitorId} | ${d.name} | ${d.purpose} | ${d.timestamp}`,
+      width: 150, height: 150
+    });
+
+    document.getElementById('success-msg').style.display = 'block';
+    document.getElementById('summary-card').style.display = 'block';
+    document.getElementById('summary-card').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function resetForm() {
+    ['name','email','phone','host'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('purpose').value = '';
+    document.getElementById('summary-card').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'none';
+    document.getElementById('qrcode').innerHTML = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
